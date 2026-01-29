@@ -24,7 +24,7 @@ def build_model(pretrained=True, fine_tune=True, num_classes=1):
 
 
 if __name__ == "__main__":
-    model = build_model(num_classes=1000)
+    model = build_model(num_classes=100)
     # Total parameters and trainable parameters.
     total_params = sum(p.numel() for p in model.parameters())
     print(f"{total_params:,} total parameters.")

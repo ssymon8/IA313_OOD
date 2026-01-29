@@ -9,16 +9,16 @@ plt.style.use("ggplot")
 
 
 def get_data(batch_size=64):
-    # CIFAR10 training dataset.
-    dataset_train = datasets.CIFAR10(
+    # CIFAR100 training dataset.
+    dataset_train = datasets.CIFAR100(
         root="data",
         train=True,
         download=True,
         transform=ToTensor(),
     )
 
-    # CIFAR10 validation dataset.
-    dataset_valid = datasets.CIFAR10(
+    # CIFAR100 validation dataset.
+    dataset_valid = datasets.CIFAR100(
         root="data",
         train=False,
         download=True,

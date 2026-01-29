@@ -30,9 +30,9 @@ np.random.seed(seed)
 random.seed(seed)
 
 # Learning and training parameters.
-epochs = 20
-batch_size = 64
-learning_rate = 0.01
+epochs = 150 #was 20 for cifar10
+batch_size = 256 #was 64 for cifar10
+learning_rate = 0.1 #was 0.01 for cifar10
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 train_loader, valid_loader = get_data(batch_size=batch_size)
@@ -40,13 +40,13 @@ train_loader, valid_loader = get_data(batch_size=batch_size)
 # Define model based on the argument parser string.
 if args["model"] == "scratch":
     print("[INFO]: Training ResNet18 built from scratch...")
-    model = ResNet(img_channels=3, num_layers=18, block=BasicBlock, num_classes=10).to(
+    model = ResNet(img_channels=3, num_layers=18, block=BasicBlock, num_classes=100).to(
         device
     )
     plot_name = "resnet_scratch"
 if args["model"] == "torchvision":
     print("[INFO]: Training the Torchvision ResNet18 model...")
-    model = build_model(pretrained=False, fine_tune=True, num_classes=10).to(device)
+    model = build_model(pretrained=False, fine_tune=True, num_classes=100).to(device)
     plot_name = "resnet_torchvision"
 print(model)
 

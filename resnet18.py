@@ -7,6 +7,7 @@ Link => https://arxiv.org/pdf/1512.03385v1.pdf
 
 import torch.nn as nn
 import torch
+import torch.optim as optim
 
 from torch import Tensor
 from typing import Type
@@ -156,7 +157,7 @@ class ResNet(nn.Module):
 
 if __name__ == "__main__":
     tensor = torch.rand([1, 3, 224, 224])
-    model = ResNet(img_channels=3, num_layers=18, block=BasicBlock, num_classes=1000)
+    model = ResNet(img_channels=3, num_layers=18, block=BasicBlock, num_classes=100)
     print(model)
 
     # Total parameters and trainable parameters.
@@ -168,3 +169,5 @@ if __name__ == "__main__":
     print(f"{total_trainable_params:,} training parameters.")
 
     output = model(tensor)
+
+    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
