@@ -30,7 +30,7 @@ np.random.seed(seed)
 random.seed(seed)
 
 # Learning and training parameters.
-epochs = 150 #was 20 for cifar10
+epochs = 50 #was 20 for cifar10
 batch_size = 256 #was 64 for cifar10
 learning_rate = 0.1 #was 0.01 for cifar10
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
