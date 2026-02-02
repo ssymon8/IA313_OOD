@@ -5,6 +5,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 import argparse
 import numpy as np
 import random
+import os
 
 from resnet18 import ResNet, BasicBlock
 from resnet18_torchvision import build_model
@@ -21,7 +22,7 @@ parser.add_argument(
 )
 args = vars(parser.parse_args())
 
-# Set seed.
+# Model Setup
 seed = 42
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
@@ -34,6 +35,11 @@ random.seed(seed)
 epochs = 200 #was 20 for cifar10
 batch_size = 256 #was 64 for cifar10
 learning_rate = 0.1 #was 0.01 for cifar10
+ckpt_every = 10  # Save model checkpoint every n epochs.
+
+#checkpoint directory configuration
+checkpoint_dir = "./checkpoints"
+os.makedirs(checkpoint_dir, exist_ok=True)
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -85,6 +91,14 @@ if __name__ == "__main__":
 
         # Step the scheduler
         scheduler.step()
+
+        # Save model checkpoint.
+        if (epoch + 1) % ckpt_every == 0:
+            ckpt_path = os.path.join(
+                checkpoint_dir, f"{plot_name}_epoch_{epoch+1}_ckpt.pth"
+            )
+            torch.save(model.state_dict(), ckpt_path)
+            print(f"[INFO]: Saved model checkpoint at {ckpt_path}")
 
         train_loss.append(train_epoch_loss)
         valid_loss.append(valid_epoch_loss)
