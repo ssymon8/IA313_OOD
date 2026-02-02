@@ -35,9 +35,6 @@ epochs = 200 #was 20 for cifar10
 batch_size = 256 #was 64 for cifar10
 learning_rate = 0.1 #was 0.01 for cifar10
 
-#Added an optimizer for better convergence
-optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
-scheduler = lr_scheduler(optimizer, T_max=epochs)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -63,7 +60,10 @@ total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires
 print(f"{total_trainable_params:,} training parameters.")
 
 # Optimizer.
-optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
+
+#scheduler
+scheduler = lr_scheduler(optimizer, T_max=epochs)
 # Loss function.
 criterion = nn.CrossEntropyLoss()
 
