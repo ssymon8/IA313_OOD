@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.optim.lr_scheduler as lr_scheduler
 import argparse
 import numpy as np
 import random
@@ -30,9 +31,14 @@ np.random.seed(seed)
 random.seed(seed)
 
 # Learning and training parameters.
-epochs = 50 #was 20 for cifar10
+epochs = 200 #was 20 for cifar10
 batch_size = 256 #was 64 for cifar10
 learning_rate = 0.1 #was 0.01 for cifar10
+
+#Added an optimizer for better convergence
+optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
+scheduler = lr_scheduler(optimizer, T_max=epochs)
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 train_loader, valid_loader = get_data(batch_size=batch_size)
@@ -68,12 +74,18 @@ if __name__ == "__main__":
     # Start the training.
     for epoch in range(epochs):
         print(f"[INFO]: Epoch {epoch+1} of {epochs}")
+
+        # Training and validation of the model
         train_epoch_loss, train_epoch_acc = train(
             model, train_loader, optimizer, criterion, device
         )
         valid_epoch_loss, valid_epoch_acc = validate(
             model, valid_loader, criterion, device
         )
+
+        # Step the scheduler
+        scheduler.step()
+
         train_loss.append(train_epoch_loss)
         valid_loss.append(valid_epoch_loss)
         train_acc.append(train_epoch_acc)

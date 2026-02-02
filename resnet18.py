@@ -7,7 +7,7 @@ Link => https://arxiv.org/pdf/1512.03385v1.pdf
 
 import torch.nn as nn
 import torch
-import torch.optim as optim
+import torch.optim as optims
 
 from torch import Tensor
 from typing import Type
