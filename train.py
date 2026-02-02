@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.optim.lr_scheduler as lr_scheduler
+import torch.optim.lr_scheduler import CosineAnnealingLR
 import argparse
 import numpy as np
 import random
@@ -63,7 +63,7 @@ print(f"{total_trainable_params:,} training parameters.")
 optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
 
 #scheduler
-scheduler = lr_scheduler(optimizer, T_max=epochs)
+scheduler = CosineAnnealingLR(optimizer, T_max=epochs)
 # Loss function.
 criterion = nn.CrossEntropyLoss()
 
