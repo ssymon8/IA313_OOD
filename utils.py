@@ -66,3 +66,20 @@ def save_plots(train_acc, valid_acc, train_loss, valid_loss, name=None):
     plt.ylabel("Loss")
     plt.legend()
     plt.savefig(os.path.join("outputs", name + "_loss.png"))
+
+def msp_score(outputs):
+    """
+    Function to compute the Maximum Softmax Probability (MSP) scores.
+    """
+    softmax_outputs = torch.softmax(outputs, dim=1)
+    msp, _ = torch.max(softmax_outputs, dim=1)
+    return msp
+
+def max_logit_score(outputs):
+    """
+    Function to compute the Maximum Logit scores.
+    """
+    max_logit, _ = torch.max(outputs, dim=1)
+    return max_logit
+
+
