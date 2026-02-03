@@ -8,7 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score
 
-from utils import msp_score, max_logit_score, energy_score, mahalanobis_parameters, mahalanobis_score
+from utils import msp_score, max_logit_score, energy_score
+from mahalanobis_utils import mahalanobis_parameters, mahalanobis_score
 from resnet18 import ResNet, BasicBlock
 
 #inference parameters
