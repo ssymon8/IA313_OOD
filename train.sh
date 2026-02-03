@@ -15,7 +15,7 @@ eval "$(conda shell.bash hook)"
 conda activate resnet
 
 # Navigate to project directory
-cd /home/ssymon/3A/ResNet18_from_Scratch_using_PyTorch
+cd ~/gianni
 
 # Create outputs directory if it doesn't exist
 mkdir -p outputs
