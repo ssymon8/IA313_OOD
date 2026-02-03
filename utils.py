@@ -87,6 +87,11 @@ def max_logit_score(outputs):
     max_logit, _ = torch.max(outputs, dim=1)
     return max_logit
 
+def energy_score(outputs, T=1.0):
+    """
+    Function to compute the Energy scores.
+    """
+    return T * torch.logsumexp(outputs / T, dim=1)
 
 #-----Mahalanobis distance scoring functions-----#
 

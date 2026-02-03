@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,8 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score
 
-from utils import msp_score, max_logit_score, mahalanobis_parameters
-
+from utils import msp_score, max_logit_score, energy_score, mahalanobis_parameters, mahalanobis_score
+from resnet18 import ResNet, BasicBlock
 
 #inference parameters
 batch_size = 512
@@ -18,7 +19,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_PATH = "./checkpoints/resnet_scratch_epoch_200_ckpt.pth"
 
 #model loading
-from resnet18 import ResNet, BasicBlock
 def load_model(MODEL_PATH, device):
     model = ResNet(img_channels=3, num_layers=18, block=BasicBlock, num_classes=num_classes)
 
@@ -71,15 +71,21 @@ if __name__ == "__main__":
     model = load_model(MODEL_PATH, device)
     train_loader, id_loader, ood_loader = load_data(batch_size)
     
-    # Compute and save Mahalanobis parameters
-    class_means, precision = mahalanobis_parameters(model, train_loader, device)
-    torch.save({
-        'class_means': class_means,
-        'precision': precision
-    }, 'mahalanobis_stats.pth')
-    print("Mahalanobis parameters saved to 'mahalanobis_stats.pth'")
+    # compute and save mahalanobis parameters
+    if os.path.exists('mahalanobis_stats.pth'):
+            print("loading mahalanobis stats...")
+            stats = torch.load('mahalanobis_stats.pth')
+            class_means = stats['class_means']
+            precision = stats['precision']
+    else:
+        # computation and saving if not existing
+        class_means, precision = mahalanobis_parameters(model, train_loader, device)
+        torch.save({
+            'class_means': class_means,
+            'precision': precision
+        }, 'mahalanobis_stats.pth')
     
-    # compute scores
+    # ------compute scores------
 
     #MSP Scores
     id_scores_msp = compute_ood_scores(model, id_loader, msp_score)
@@ -88,6 +94,14 @@ if __name__ == "__main__":
     #Max Logit Scores
     id_scores_maxlogit = compute_ood_scores(model, id_loader, max_logit_score)
     ood_scores_maxlogit = compute_ood_scores(model, ood_loader, max_logit_score)
+
+    #Energy Scores
+    id_scores_energy = compute_ood_scores(model, id_loader, energy_score)
+    ood_scores_energy = compute_ood_scores(model, ood_loader, energy_score)
+
+    #Mahalanobis Scores
+    id_scores_mahalanobis = mahalanobis_score(model, id_loader, class_means, precision, device).cpu().numpy()
+    ood_scores_mahalanobis = mahalanobis_score(model, ood_loader, class_means, precision, device).cpu().numpy()
 
     #Other OOD metrics to be added
     #
@@ -109,6 +123,10 @@ if __name__ == "__main__":
     evaluate_auroc(id_scores_msp, ood_scores_msp, "-MSP-")
     # Evaluate AUROC for Max Logit
     evaluate_auroc(id_scores_maxlogit, ood_scores_maxlogit, "-Max Logit-")
+    # Evaluate AUROC for Energy
+    evaluate_auroc(id_scores_energy, ood_scores_energy, "-Energy-")
+    #Evaluate AUROC for Mahalanobis
+    evaluate_auroc(id_scores_mahalanobis, ood_scores_mahalanobis, "-Mahalanobis-")
 
 
 
