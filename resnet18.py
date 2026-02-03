@@ -86,14 +86,14 @@ class ResNet(nn.Module):
         self.conv1 = nn.Conv2d(
             in_channels=img_channels,
             out_channels=self.in_channels,
-            kernel_size=7,
-            stride=2,
-            padding=3,
+            kernel_size=3, #was 7
+            stride=1, #was 2
+            padding=1, #was 3
             bias=False,
         )
         self.bn1 = nn.BatchNorm2d(self.in_channels)
         self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.maxpool = nn.Identity() #nn.MaxPool2d(kernel_size=3, stride=2, padding=1) #removed for cifar100
 
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)

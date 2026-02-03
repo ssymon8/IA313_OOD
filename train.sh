@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=resnet18_cifar100_drouet
-#SBATCH --partition=ENSTA-L40s
+#SBATCH --partition=ENSTA-l40s
 #SBATCH --output=resnet18_cifar100_%j.log
 #SBATCH --error=resnet18_cifar100_%j.err
 #SBATCH --time=07:00:00
