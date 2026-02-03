@@ -18,17 +18,18 @@ MODEL_PATH = "./checkpoints/resnet_scratch_epoch_200_ckpt.pth"
 
 #model loading
 from resnet18 import ResNet, BasicBlock
+def load_model(MODEL_PATH, device):
+    model = ResNet(img_channels=3, num_layers=18, block=BasicBlock, num_classes=num_classes)
 
-model = ResNet(img_channels=3, num_layers=18, block=BasicBlock, num_classes=num_classes)
+    checkpoint = torch.load(MODEL_PATH, map_location=device)
+    if 'model_state_dict' in checkpoint:
+        model.load_state_dict(checkpoint['model_state_dict'])
+    else:
+        model.load_state_dict(checkpoint)
 
-checkpoint = torch.load(MODEL_PATH, map_location=device)
-if 'model_state_dict' in checkpoint:
-    model.load_state_dict(checkpoint['model_state_dict'])
-else:
-    model.load_state_dict(checkpoint)
-
-model.to(device)
-model.eval()
+    model.to(device)
+    model.eval()
+    return model
 
 #data loading
 def load_data(batch_size=batch_size):
@@ -62,4 +63,38 @@ def compute_ood_scores(model, loader, score_fn):
     return np.concatenate(scores)
 
 if __name__ == "__main__":
+    model = load_model(MODEL_PATH, device)
+    id_loader, ood_loader = load_data(batch_size)
+    # compute scores
+
+    #MSP Scores
+    id_scores_msp = compute_ood_scores(model, id_loader, msp_score)
+    ood_scores_msp = compute_ood_scores(model, ood_loader, msp_score)
+
+    #Max Logit Scores
+    id_scores_maxlogit = compute_ood_scores(model, id_loader, max_logit_score)
+    ood_scores_maxlogit = compute_ood_scores(model, ood_loader, max_logit_score)
+
+    #Other OOD metrics to be added
+    #
+    #
+    #
+
+    def evaluate_auroc(id_scores, ood_scores, name):
+        # Label 1 pour ID, 0 pour OOD
+        y_true = np.concatenate([np.ones(len(id_scores)), np.zeros(len(ood_scores))])
+        y_scores = np.concatenate([id_scores, ood_scores])
+        
+        auroc = roc_auc_score(y_true, y_scores)
+        print(f"Métrique {name} - AUROC: {auroc:.4f}")
+        return auroc
     
+    print("--Results--:")
+
+    # Evaluate AUROC for MSP
+    evaluate_auroc(id_scores_msp, ood_scores_msp, "-MSP-")
+    # Evaluate AUROC for Max Logit
+    evaluate_auroc(id_scores_maxlogit, ood_scores_maxlogit, "-Max Logit-")
+
+
+
