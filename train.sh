@@ -3,7 +3,7 @@
 #SBATCH --partition=ENSTA-l40s
 #SBATCH --output=resnet18_cifar100_%j.log
 #SBATCH --error=resnet18_cifar100_%j.err
-#SBATCH --time=07:00:00
+#SBATCH --time=20:00:00
 #SBATCH --nodelist=ensta-l40s01.r2.enst.fr
 
 # Load and initialize conda
