@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import os
 import torch
+import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 
@@ -23,81 +24,80 @@ def extract_features(model, loader, device, layer_name='avgpool'):
     # Hook to extract features from the specified layer
     batch_features = []
     def hook(module, input, output):
-        
-        features_list.append(output.flatten(1).detach().cpu())
+        if output.dim() > 2:
+            #if 4D tensor (layer 3 for our ResNet18), apply adaptive avg pooling
+            output = F.adaptive_avg_pool2d(output, 1)
+        batch_features.append(output.flatten(1).detach().cpu())
     
+    #we hook the target layer
     handle = getattr(model, layer_name).register_forward_hook(hook)
     
     print(f"Extracting features from layer: {layer_name}...")
     with torch.no_grad():
         for images, _ in tqdm(loader):
             images = images.to(device)
+            batch_features = []
+
             _ = model(images)
+
+            # extract features
+            features = batch_features[0]  # [batch_size, feature_dim]
+            features_list.append(features)
     
-    handle.remove()
-    
+    handle.remove() #hook cleanup
+
     # Concatenation
     features = torch.cat(features_list)  # [num_samples, feature_dim]
-    return features 
+    labels = torch.cat(labels_list)      # [num_samples]
+    return features, labels
 
-def mahalanobis_parameters(model, train_loader, device):
-
+def get_class_means(features, labels, num_classes=100):
     """
-    Single layer Mahalanobis parameters computation.
-    Computes class means and tied covariance matrix inverse on the penultimate layer 
-    of the NN.
+    Compute class means from features and labels.
     """
-    model.eval()
-       
-    # Hook to extract features from the avgpool layer
-    features_list = []
-    all_labels = []
-    def hook(module, input, output):
-        features_list.append(output.flatten(1).detach().cpu())
-    
-    handle = model.avgpool.register_forward_hook(hook)
-    
-    print("Mahalanobis stats computing (Train Set)...")
-    with torch.no_grad():
-        for images, labels in tqdm(train_loader):
-            images = images.to(device)
-            _ = model(images)
-            all_labels.append(labels)
-    handle.remove()
-    
-    # Concatenation
-    features = torch.cat(features_list) # [50000, 512]
-    labels = torch.cat(all_labels)     # [50000]
-    
-    # class means calculation
     class_means = []
-    num_classes = 100
-    
     for c in range(num_classes):
         class_features = features[labels == c]
         mean = torch.mean(class_features, dim=0)
         class_means.append(mean)
-        
     class_means = torch.stack(class_means)
-    
-    # Tied Covariance Matrix
-    # centering the features around their class means
-    # X_centered = X - Mu_{y}
+    return class_means
+
+def estimate_inv_covariance(features, labels, class_means):
+    """
+    Estimate the tied inverse covariance matrix from features and class means.
+    """
+    #centering the features around their class means
     centered_features = []
-    for c in range(num_classes):
+    for c in range(len(class_means)):
         class_features = features[labels == c]
         mean = class_means[c]
         centered_features.append(class_features - mean)
-        
+    
     centered_features = torch.cat(centered_features)
-    
-    # empiricalk cov
-    # shape: [512, 512]
+
+    # empirical covariance
     cov = torch.matmul(centered_features.t(), centered_features) / (len(features) - 1)
-    
-    # matrix inversion
+
     precision = torch.linalg.pinv(cov, hermitian=True)
-    
+    return precision
+
+def mahalanobis_parameters(model, train_loader, device, layer_name='avgpool'):
+
+    """
+    Single layer Mahalanobis parameters computation.
+    Computes class means and tied covariance matrix inverse on the designated layer 
+    of the NN.
+    """
+    # feature extraction
+    features, labels = extract_features(model, train_loader, device, layer_name)
+
+    # class means...
+    class_means = get_class_means(features, labels, num_classes=100)
+
+    # precision matrix...
+    precision = estimate_inv_covariance(features, labels, class_means)
+
     return class_means, precision
 
 
@@ -109,9 +109,19 @@ def multibranch_mahalanobis_parameters(model, train_loader, device):
     Returns a list of (class_means, precision) tuples for each layer.
     """
 
-    pass
+    confidence = []
 
-def mahalanobis_score(model, loader, class_means, precision, device):
+    layers = ['layer1', 'layer2', 'layer3', 'layer4', 'avgpool']
+
+    for layer_name in layers:
+        class_means, precision = mahalanobis_parameters(
+            model, train_loader, device, layer_name
+        )
+        confidence.append((class_means, precision))
+    
+    return confidence
+
+def mahalanobis_score(model, loader, class_means, precision, device, layer_name='avgpool'):
     model.eval()
     
     class_means = class_means.to(device)
@@ -119,16 +129,20 @@ def mahalanobis_score(model, loader, class_means, precision, device):
 
     scores = []
     
-    # Hook to extract features from the avgpool layer
+    # Hook to extract features
     batch_features = []
     def hook(module, input, output):
+        if output.dim() > 2:
+            #if 4D tensor (layer 3 for our ResNet18), apply adaptive avg pooling
+            output = F.adaptive_avg_pool2d(output, 1)
         batch_features.append(output.flatten(1))
-    
-    handle = model.avgpool.register_forward_hook(hook)
+
+    target_layer = getattr(model, layer_name)    
+    handle = target_layer.register_forward_hook(hook)
     
     print("Computing Mahalanobis scores...")
     with torch.no_grad():
-        for images, _ in tqdm(loader):
+        for images, _ in loader:
             images = images.to(device)
             batch_features= []
 
@@ -155,3 +169,39 @@ def mahalanobis_score(model, loader, class_means, precision, device):
 
     handle.remove()
     return torch.cat(scores)
+
+def multibranch_mahalanobis_score(model, loader, confidence, device, alpha=None):
+    """
+    Computes Mahalanobis scores from multiple layers and linearly combines them.
+    alpha: list of weights for each layer. If None, uniform weights are used.
+    Returns the combined scores.
+    """
+    model.eval()
+    
+    layers = ['layer1', 'layer2', 'layer3', 'layer4', 'avgpool']
+    
+    # if no alpha provided, use uniform weights
+    if alpha is None:
+        alpha = [1.0/len(layers)] * len(layers)
+
+    total_scores = None
+    
+    print("Computing Multibranch Mahalanobis scores...")
+    for i, layer_name in enumerate(tqdm(layers)):
+        
+        # i-th layer parameters
+        stats = confidence[i]
+        class_means = stats[0]
+        precision = stats[1]
+        
+        # i-th layer scores
+        layer_score = mahalanobis_score(
+            model, loader, class_means, precision, device, layer_name=layer_name
+        )
+        
+        if total_scores is None:
+            total_scores = alpha[i] * layer_score
+        else:
+            total_scores += alpha[i] * layer_score
+            
+    return total_scores

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score
 
 from utils import msp_score, max_logit_score, energy_score
-from mahalanobis_utils import mahalanobis_parameters, mahalanobis_score
+from mahalanobis_utils import mahalanobis_parameters, mahalanobis_score, multibranch_mahalanobis_parameters, multibranch_mahalanobis_score
 from resnet18 import ResNet, BasicBlock
 
 #inference parameters
@@ -85,6 +85,14 @@ if __name__ == "__main__":
             'class_means': class_means,
             'precision': precision
         }, 'mahalanobis_stats.pth')
+
+    if os.path.exists('multibranch_mahalanobis_stats.pth'):
+            print("loading multibranch mahalanobis stats...")
+            multibranch_stats = torch.load('multibranch_mahalanobis_stats.pth')
+            multibranch_confidence = multibranch_stats['confidence']
+    else:
+         multibranch_confidence = multibranch_mahalanobis_parameters(model, train_loader, device)
+         torch.save({'confidence': multibranch_confidence}, 'multibranch_mahalanobis_stats.pth')
     
     # ------compute scores------
 
@@ -104,13 +112,18 @@ if __name__ == "__main__":
     id_scores_mahalanobis = mahalanobis_score(model, id_loader, class_means, precision, device).cpu().numpy()
     ood_scores_mahalanobis = mahalanobis_score(model, ood_loader, class_means, precision, device).cpu().numpy()
 
+    #Multibranch Mahalanobis Scores
+    id_scores_multibranch_mahalanobis = multibranch_mahalanobis_score(model, id_loader, multibranch_confidence, device).cpu().numpy()
+    ood_scores_multibranch_mahalanobis = multibranch_mahalanobis_score(model, ood_loader, multibranch_confidence, device).cpu().numpy()
+
+
     #Other OOD metrics to be added
     #
     #
     #
 
     def evaluate_auroc(id_scores, ood_scores, name):
-        # Label 1 pour ID, 0 pour OOD
+        # Label 1 for ID, 0 for OOD
         y_true = np.concatenate([np.ones(len(id_scores)), np.zeros(len(ood_scores))])
         y_scores = np.concatenate([id_scores, ood_scores])
         
@@ -128,6 +141,8 @@ if __name__ == "__main__":
     evaluate_auroc(id_scores_energy, ood_scores_energy, "-Energy-")
     #Evaluate AUROC for Mahalanobis
     evaluate_auroc(id_scores_mahalanobis, ood_scores_mahalanobis, "-Mahalanobis-")
+    #Evaluate AUROC for Multibranch Mahalanobis
+    evaluate_auroc(id_scores_multibranch_mahalanobis, ood_scores_multibranch_mahalanobis, "-Multibranch Mahalanobis-")
 
 
 
