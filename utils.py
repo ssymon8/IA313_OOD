@@ -95,13 +95,15 @@ def energy_score(outputs, T=1.0):
 
 #-----Mahalanobis distance scoring functions-----#
 
+#The following functions were moved to mahalanobis_utils.py to improve code organization.
+
+"""
 def mahalanobis_parameters(model, train_loader, device):
 
-    """
     Single layer Mahalanobis parameters computation.
     Computes class means and tied covariance matrix inverse on the penultimate layer 
     of the NN.
-    """
+
     model.eval()
        
     # Hook to extract features from the avgpool layer
@@ -155,17 +157,6 @@ def mahalanobis_parameters(model, train_loader, device):
     
     return class_means, precision
 
-
-def multibranch_mahalanobis_parameters(model, train_loader, device):
-    """
-    Multi-layer Mahalanobis parameters computation.
-    Computes class means and tied covariance matrix inverse on multiple layers 
-    of the NN.
-    Returns a list of (class_means, precision) tuples for each layer.
-    """
-    # To be implemented if needed
-    pass
-
 def mahalanobis_score(model, loader, class_means, precision, device):
     model.eval()
     
@@ -210,3 +201,5 @@ def mahalanobis_score(model, loader, class_means, precision, device):
 
     handle.remove()
     return torch.cat(scores)
+
+"""

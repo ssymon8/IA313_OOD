@@ -1,7 +1,44 @@
+import matplotlib.pyplot as plt
+import os
+import torch
+import numpy as np
+from tqdm import tqdm
 
+from torch.utils.data import DataLoader
+from torchvision import datasets
+from torchvision import transforms
 
 
 #-----Mahalanobis distance scoring functions-----#
+
+def extract_features(model, loader, device, layer_name='avgpool'):
+    """
+    Extract features from a specified layer of the model for all samples in the loader.
+    """
+    
+    model.eval()
+    features_list = []
+    labels_list = []
+    
+    # Hook to extract features from the specified layer
+    batch_features = []
+    def hook(module, input, output):
+        
+        features_list.append(output.flatten(1).detach().cpu())
+    
+    handle = getattr(model, layer_name).register_forward_hook(hook)
+    
+    print(f"Extracting features from layer: {layer_name}...")
+    with torch.no_grad():
+        for images, _ in tqdm(loader):
+            images = images.to(device)
+            _ = model(images)
+    
+    handle.remove()
+    
+    # Concatenation
+    features = torch.cat(features_list)  # [num_samples, feature_dim]
+    return features 
 
 def mahalanobis_parameters(model, train_loader, device):
 
@@ -71,7 +108,7 @@ def multibranch_mahalanobis_parameters(model, train_loader, device):
     of the NN.
     Returns a list of (class_means, precision) tuples for each layer.
     """
-    # To be implemented if needed
+
     pass
 
 def mahalanobis_score(model, loader, class_means, precision, device):
