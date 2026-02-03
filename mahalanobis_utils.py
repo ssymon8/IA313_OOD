@@ -34,15 +34,16 @@ def extract_features(model, loader, device, layer_name='avgpool'):
     
     print(f"Extracting features from layer: {layer_name}...")
     with torch.no_grad():
-        for images, _ in tqdm(loader):
+        for images, labels in tqdm(loader):
             images = images.to(device)
             batch_features = []
 
-            _ = model(images)
+            _ = model(images) #forward pass for the hook
 
             # extract features
             features = batch_features[0]  # [batch_size, feature_dim]
             features_list.append(features)
+            labels_list.append(labels)
     
     handle.remove() #hook cleanup
 
