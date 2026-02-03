@@ -40,8 +40,8 @@ def get_data(batch_size=64):
     )
 
     # Create data loaders.
-    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
-    valid_loader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
+    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=16, pin_memory=True)
+    valid_loader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False, num_workers=16, pin_memory=True)
     return train_loader, valid_loader
 
 

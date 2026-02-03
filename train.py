@@ -33,7 +33,7 @@ random.seed(seed)
 
 # Learning and training parameters.
 epochs = 200 #was 20 for cifar10
-batch_size = 256 #was 64 for cifar10
+batch_size = 512 #was 64 for cifar10
 learning_rate = 0.1 #was 0.01 for cifar10
 ckpt_every = 10  # Save model checkpoint every n epochs.
 
