@@ -3,18 +3,32 @@ import os
 
 from torch.utils.data import DataLoader
 from torchvision import datasets
-from torchvision.transforms import ToTensor
+from torchvision import transforms
 
 plt.style.use("ggplot")
 
 
 def get_data(batch_size=64):
+    #Data augmentation for the training set and normalization
+    train_transform = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
+    ])
+
+    #Normalization for the validation set
+    valid_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
+    ])
+
     # CIFAR100 training dataset.
     dataset_train = datasets.CIFAR100(
         root="data",
         train=True,
         download=True,
-        transform=ToTensor(),
+        transform=train_transform,
     )
 
     # CIFAR100 validation dataset.
@@ -22,12 +36,12 @@ def get_data(batch_size=64):
         root="data",
         train=False,
         download=True,
-        transform=ToTensor(),
+        transform=valid_transform,
     )
 
     # Create data loaders.
-    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
-    valid_loader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
+    valid_loader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
     return train_loader, valid_loader
 
 

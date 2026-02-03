@@ -67,7 +67,6 @@ print(f"{total_trainable_params:,} training parameters.")
 
 # Optimizer.
 optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
-
 #scheduler
 scheduler = CosineAnnealingLR(optimizer, T_max=epochs)
 # Loss function.
