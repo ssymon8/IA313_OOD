@@ -6,7 +6,8 @@ from torchvision import datasets, transforms
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score
-from utils import msp_score, max_logit_score
+
+from utils import msp_score, max_logit_score, mahalanobis_parameters
 
 
 #inference parameters
@@ -39,6 +40,10 @@ def load_data(batch_size=batch_size):
         transforms.Normalize(*stats),
     ])
 
+    # Train loader without data augmentation for Mahalanobis parameters
+    train_dataset = datasets.CIFAR100(root='data', train=True, download=True, transform=test_transform)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
+
     # 1. In-Distribution (CIFAR-100 Test)
     id_dataset = datasets.CIFAR100(root='data', train=False, download=True, transform=test_transform)
     id_loader = DataLoader(id_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
@@ -46,7 +51,7 @@ def load_data(batch_size=batch_size):
     # 2. Out-of-Distribution (SVHN Test)
     ood_dataset = datasets.SVHN(root='data', split='test', download=True, transform=test_transform)
     ood_loader = DataLoader(ood_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
-    return id_loader, ood_loader
+    return train_loader, id_loader, ood_loader
 
 #score computation
 def compute_ood_scores(model, loader, score_fn):
@@ -64,7 +69,16 @@ def compute_ood_scores(model, loader, score_fn):
 
 if __name__ == "__main__":
     model = load_model(MODEL_PATH, device)
-    id_loader, ood_loader = load_data(batch_size)
+    train_loader, id_loader, ood_loader = load_data(batch_size)
+    
+    # Compute and save Mahalanobis parameters
+    class_means, precision = mahalanobis_parameters(model, train_loader, device)
+    torch.save({
+        'class_means': class_means,
+        'precision': precision
+    }, 'mahalanobis_stats.pth')
+    print("Mahalanobis parameters saved to 'mahalanobis_stats.pth'")
+    
     # compute scores
 
     #MSP Scores
