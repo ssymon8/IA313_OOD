@@ -11,6 +11,7 @@ from sklearn.metrics import roc_auc_score
 from utils import msp_score, max_logit_score, energy_score
 from mahalanobis_utils import mahalanobis_parameters, mahalanobis_score, multibranch_mahalanobis_parameters, multibranch_mahalanobis_score
 from resnet18 import ResNet, BasicBlock
+from vim_utils import vim_parameters, vim_score
 
 #inference parameters
 batch_size = 512
@@ -72,6 +73,10 @@ if __name__ == "__main__":
     model = load_model(MODEL_PATH, device)
     train_loader, id_loader, ood_loader = load_data(batch_size)
     
+
+    #------------------------------------------------------------------
+    # Mahalanobis distance scoring
+    #------------------------------------------------------------------
     # compute and save mahalanobis parameters
     if os.path.exists('mahalanobis_stats.pth'):
             print("loading mahalanobis stats...")
@@ -93,6 +98,18 @@ if __name__ == "__main__":
     else:
          multibranch_confidence = multibranch_mahalanobis_parameters(model, train_loader, device)
          torch.save({'confidence': multibranch_confidence}, 'multibranch_mahalanobis_stats.pth')
+    
+    # -----------------------------------------------------------------
+    # ViM (Virtual-logit Matching)
+    # -----------------------------------------------------------------
+    if os.path.exists('vim_stats.pth'):
+        print("loading ViM stats...")
+        vim_stats = torch.load('vim_stats.pth')
+    else:
+        # Calcul sur le TRAIN set
+        vim_stats = vim_parameters(model, train_loader, device)
+        torch.save(vim_stats, 'vim_stats.pth')
+
     
     # ------compute scores------
 
@@ -116,19 +133,18 @@ if __name__ == "__main__":
     id_scores_multibranch_mahalanobis = multibranch_mahalanobis_score(model, id_loader, multibranch_confidence, device).cpu().numpy()
     ood_scores_multibranch_mahalanobis = multibranch_mahalanobis_score(model, ood_loader, multibranch_confidence, device).cpu().numpy()
 
+    #ViM Scores
+    id_scores_vim = vim_score(model, id_loader, vim_stats, device).numpy()
+    ood_scores_vim = vim_score(model, ood_loader, vim_stats, device).numpy()
 
-    #Other OOD metrics to be added
-    #
-    #
-    #
-
+#no more ODD metrics to add
     def evaluate_auroc(id_scores, ood_scores, name):
         # Label 1 for ID, 0 for OOD
         y_true = np.concatenate([np.ones(len(id_scores)), np.zeros(len(ood_scores))])
         y_scores = np.concatenate([id_scores, ood_scores])
         
         auroc = roc_auc_score(y_true, y_scores)
-        print(f"Métrique {name} - AUROC: {auroc:.4f}")
+        print(f"Metric {name} - AUROC: {auroc:.4f}")
         return auroc
     
     print("--Results--:")
@@ -143,6 +159,8 @@ if __name__ == "__main__":
     evaluate_auroc(id_scores_mahalanobis, ood_scores_mahalanobis, "-Mahalanobis-")
     #Evaluate AUROC for Multibranch Mahalanobis
     evaluate_auroc(id_scores_multibranch_mahalanobis, ood_scores_multibranch_mahalanobis, "-Multibranch Mahalanobis-")
+    #Evaluate AUROC for ViM
+    evaluate_auroc(id_scores_vim, ood_scores_vim, "-ViM-")
 
 
 
