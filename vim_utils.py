@@ -49,7 +49,7 @@ def vim_parameters(model, train_loader, device, layer_name='avgpool'):
 
     features, logits = extract_features_and_logits(model, train_loader, device, layer_name)
     
-    print("Calcul des paramètres ViM (Algèbre Linéaire)...")
+    print("Computing ViM parameters...")
     
     #Computing on the device
     features = features.to(device).double()
@@ -63,25 +63,17 @@ def vim_parameters(model, train_loader, device, layer_name='avgpool'):
     
     # 3. computing the virtual origin
     Winv = pinv(W)
-    u = -torch.matmul(Winv.t(), b) # [D]
+    u = -torch.matmul(Winv, b) # [D]
     
     # 4. Centering the features around u
     X_centered = features - u
     
     # 5. computing the different spaces
-    N = X_centered.shape[0]
-    cov = torch.matmul(X_centered.t(), X_centered) / (N - 1)
-    
+    U, S, Vh = torch.linalg.svd(W, full_matrices=True)
 
-    eig_vals, eig_vecs = eigh(cov)
-    feature_dim = features.shape[1]
-    num_classes = logits.shape[1]
-    
-    #eig_vecs are ordered in ascending order of eigenvalue
-    # The first vectors are those of low variance (Null Space)
-    # We select the residual subspace
-    dim_residual = feature_dim - num_classes
-    NS = eig_vecs[:, :dim_residual] # [D, D-C]
+    num_classes = W.shape[0]
+    V= Vh.t() # [D, D]
+    NS = V[:, num_classes:] # [D, D-C]
     
     vlogits = torch.logsumexp(logits, dim=1)
     

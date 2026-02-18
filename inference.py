@@ -106,7 +106,6 @@ if __name__ == "__main__":
         print("loading ViM stats...")
         vim_stats = torch.load('vim_stats.pth')
     else:
-        # Calcul sur le TRAIN set
         vim_stats = vim_parameters(model, train_loader, device)
         torch.save(vim_stats, 'vim_stats.pth')
 
