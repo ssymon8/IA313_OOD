@@ -144,8 +144,22 @@ if __name__ == "__main__":
 
 
     # NECO Scores
-    id_scores_neco, ood_scores_neco, neco_auroc = compute_neco_scores(model,train_loader,id_loader,ood_loader,device)
+    id_scores_neco, ood_scores_neco = compute_neco_scores(model,train_loader,id_loader,ood_loader,device)
     
+    # -------------------------------------------------
+    # Plot NECO score distribution
+    # -------------------------------------------------
+
+    plt.figure(figsize=(8,5))
+    plt.hist(id_scores_neco, bins=50, alpha=0.6, label="ID (CIFAR-100)")
+    plt.hist(ood_scores_neco, bins=50, alpha=0.6, label="OOD (SVHN)")
+    plt.legend()
+    plt.title("NECO Score Distribution")
+    plt.xlabel("NECO Score")
+    plt.ylabel("Frequency")
+    plt.tight_layout()
+    plt.savefig("neco_hist.png")
+    plt.close()
 
 
 #no more ODD metrics to add

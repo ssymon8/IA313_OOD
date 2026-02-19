@@ -2,7 +2,6 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
-from sklearn.metrics import roc_auc_score
 
 
 # ------------------------------------------------------------
@@ -42,12 +41,12 @@ def extract_features(model, loader, device, layer_name='avgpool'):
 
 
 # ------------------------------------------------------------
-# Compute class means (Neural Collapse)
+# Compute class means
 # ------------------------------------------------------------
 
 def compute_class_means(features, labels, num_classes=100):
     """
-    Compute class means μ_k
+    Compute μ_k for each class
     """
     class_means = []
 
@@ -65,15 +64,20 @@ def compute_class_means(features, labels, num_classes=100):
 
 def neco_score(features, class_means):
     """
-    S_NECO(x) = min_k ||f(x) - μ_k||^2
-    """
-    # features: [N, D]
-    # class_means: [C, D]
+    Neural Collapse OOD score.
 
+    We return NEGATIVE squared distance so that:
+        - High score = ID
+        - Low score = OOD
+
+    S_NECO(x) = - min_k ||f(x) - μ_k||^2
+    """
+
+    # Compute squared Euclidean distance
     dists = torch.cdist(features, class_means) ** 2  # [N, C]
     min_dist, _ = torch.min(dists, dim=1)
 
-    return min_dist
+    return -min_dist  # IMPORTANT: negative for AUROC consistency
 
 
 # ------------------------------------------------------------
@@ -82,42 +86,28 @@ def neco_score(features, class_means):
 
 def compute_neco_scores(model, train_loader, id_loader, ood_loader, device):
     """
-    Full NECO pipeline:
-    - compute class means from train set
-    - compute NECO score for ID and OOD
-    - compute AUROC
+    Compute NECO OOD scores.
     """
 
     print("\n===== Computing NECO parameters =====")
 
+    # 1️⃣ Compute class means on train set
     train_features, train_labels = extract_features(model, train_loader, device)
     class_means = compute_class_means(train_features, train_labels)
 
+    # Move to device once
+    class_means = class_means.to(device)
+
+    # 2️⃣ ID scores
     print("Computing ID NECO scores...")
     id_features, _ = extract_features(model, id_loader, device)
-    id_scores = neco_score(id_features, class_means)
+    id_features = id_features.to(device)
+    id_scores = neco_score(id_features, class_means).cpu().numpy()
 
+    # 3️⃣ OOD scores
     print("Computing OOD NECO scores...")
     ood_features, _ = extract_features(model, ood_loader, device)
-    ood_scores = neco_score(ood_features, class_means)
+    ood_features = ood_features.to(device)
+    ood_scores = neco_score(ood_features, class_means).cpu().numpy()
 
-    # Convert to numpy
-    id_scores = id_scores.numpy()
-    ood_scores = ood_scores.numpy()
-
-    # For AUROC:
-    # ID label = 1, OOD label = 0
-    y_true = np.concatenate([
-        np.ones_like(id_scores),
-        np.zeros_like(ood_scores)
-    ])
-    y_scores = np.concatenate([id_scores, ood_scores])
-
-    # Important:
-    # Large distance = more OOD
-    # So we invert sign for AUROC consistency
-    auroc = roc_auc_score(y_true, -y_scores)
-
-    print(f"NECO AUROC: {auroc:.4f}")
-
-    return id_scores, ood_scores, auroc
+    return id_scores, ood_scores
