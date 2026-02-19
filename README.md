@@ -1,4 +1,4 @@
-# CSC_5IA23 Project: Out-of-Distribution Detection and Neural Collapse
+# CSC_5IA23 Project: Out-of-Distribution Detection and Neural Collapse (Drouet, Fischer)
 
 This repository contains the complete implementation of an anomaly detection pipeline (Out-of-Distribution or OOD) and an analysis of the Neural Collapse phenomenon. The project centers around a ResNet-18 model trained from scratch on CIFAR-100, evaluated against an OOD dataset (SVHN).
 
