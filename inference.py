@@ -13,6 +13,8 @@ from mahalanobis_utils import mahalanobis_parameters, mahalanobis_score, multibr
 from resnet18 import ResNet, BasicBlock
 from vim_utils import vim_parameters, vim_score
 from nc_utils import compute_nc_metrics, plot_nc_visualizations
+from neco_utils import compute_neco_scores
+
 
 #inference parameters
 batch_size = 512
@@ -140,6 +142,12 @@ if __name__ == "__main__":
     id_scores_vim = vim_score(model, id_loader, vim_stats, device).numpy()
     ood_scores_vim = vim_score(model, ood_loader, vim_stats, device).numpy()
 
+
+    # NECO Scores
+    id_scores_neco, ood_scores_neco, neco_auroc = compute_neco_scores(model,train_loader,id_loader,ood_loader,device)
+    
+
+
 #no more ODD metrics to add
     def evaluate_auroc(id_scores, ood_scores, name):
         # Label 1 for ID, 0 for OOD
@@ -164,6 +172,8 @@ if __name__ == "__main__":
     evaluate_auroc(id_scores_multibranch_mahalanobis, ood_scores_multibranch_mahalanobis, "-Multibranch Mahalanobis-")
     #Evaluate AUROC for ViM
     evaluate_auroc(id_scores_vim, ood_scores_vim, "-ViM-")
+    #Evaluate AUROC for NECO
+    evaluate_auroc(id_scores_neco, ood_scores_neco, "-NECO-")
 
     #--------------------------------
     #------------------NC Analysis------------------
