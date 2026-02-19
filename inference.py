@@ -9,9 +9,10 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score
 
 from utils import msp_score, max_logit_score, energy_score
-from mahalanobis_utils import mahalanobis_parameters, mahalanobis_score, multibranch_mahalanobis_parameters, multibranch_mahalanobis_score
+from mahalanobis_utils import mahalanobis_parameters, mahalanobis_score, multibranch_mahalanobis_parameters, multibranch_mahalanobis_score, extract_features
 from resnet18 import ResNet, BasicBlock
 from vim_utils import vim_parameters, vim_score
+from nc_utils import compute_nc_metrics, plot_nc_visualizations
 
 #inference parameters
 batch_size = 512
@@ -68,6 +69,9 @@ def compute_ood_scores(model, loader, score_fn):
             scores.append(batch_scores.cpu().numpy())
     
     return np.concatenate(scores)
+
+
+
 
 if __name__ == "__main__":
     model = load_model(MODEL_PATH, device)
@@ -160,6 +164,32 @@ if __name__ == "__main__":
     evaluate_auroc(id_scores_multibranch_mahalanobis, ood_scores_multibranch_mahalanobis, "-Multibranch Mahalanobis-")
     #Evaluate AUROC for ViM
     evaluate_auroc(id_scores_vim, ood_scores_vim, "-ViM-")
+
+    #--------------------------------
+    #------------------NC Analysis------------------
+    #--------------------------------
+
+
+
+    # 1. Extract features and labels for NC analysis
+
+    print("Extraction of features and labels for NC analysis...")
+    features, labels = extract_features(model, train_loader, device, layer_name='avgpool')
+
+    # 2. Get the weights and biases of the last layer
+    W = model.fc.weight.detach()
+    b = model.fc.bias.detach()
+
+    # 3. compute NC metrics
+    metrics = compute_nc_metrics(
+        features.to(device), 
+        labels.to(device), 
+        W.to(device),
+        biases=b.to(device),
+        num_classes=100
+    )
+
+    plot_nc_visualizations(metrics)
 
 
 
